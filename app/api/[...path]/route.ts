@@ -1,32 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
 import chromium from "chrome-aws-lambda";
-import puppeteer from "puppeteer-core";
 
-const BASE_URL = "https://www.towerstats.com";
+export const runtime = "nodejs"; // default Node runtime
+
+// Simple in-memory rate limiter
+const rateLimitWindow = 60_000; // 1 minute
+const maxRequests = 10;
+const ipMap = new Map<string, { count: number; timestamp: number }>();
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { path: string[] } }
 ) {
+  const ip = request.ip || "global"; // fallback if no IP
+  const now = Date.now();
+  const record = ipMap.get(ip) || { count: 0, timestamp: now };
+
+  if (now - record.timestamp > rateLimitWindow) {
+    record.count = 0;
+    record.timestamp = now;
+  }
+
+  record.count += 1;
+  ipMap.set(ip, record);
+
+  if (record.count > maxRequests) {
+    return NextResponse.json(
+      { success: false, error: "Rate limit exceeded" },
+      { status: 429 }
+    );
+  }
+
   const targetPath = params.path.join("/");
   const query = request.nextUrl.searchParams.toString();
-  const targetUrl = `${BASE_URL}/${targetPath}${query ? `?${query}` : ""}`;
+  const targetUrl = `https://www.towerstats.com/${targetPath}${query ? `?${query}` : ""}`;
 
-  let browser: puppeteer.Browser | null = null;
-
+  let browser;
   try {
-    // Launch minimal headless browser
-    browser = await puppeteer.launch({
+    browser = await chromium.puppeteer.launch({
       args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath,
-      headless: chromium.headless,
+      headless: true,
     });
 
     const page = await browser.newPage();
     await page.goto(targetUrl, { waitUntil: "networkidle2" });
-
-    // Extract hardest tower HTML
-    const html = await page.$eval("#hardest-tower", (el) => el.outerHTML);
+    const html = await page.content();
 
     const hardestTower = extractHardestTower(html);
 
@@ -45,17 +65,27 @@ export async function GET(
   }
 }
 
+/**
+ * Ultra-lean hardest tower extractor
+ */
 function extractHardestTower(html: string) {
-  // Example: <div id="hardest-tower" style="display:block;"><span style="color:#FFFE00;">ToM</span> (2.12) - Top 11.79%</div>
-  const colorMatch = /color:\s*(#[0-9A-Fa-f]{3,6})/.exec(html);
-  const nameMatch = /<span[^>]*>(.*?)<\/span>/.exec(html);
-  const extraMatch = /<\/span>(.*)<\/div>/.exec(html);
+  const start = html.indexOf('id="hardest-tower"');
+  if (start === -1) return null;
 
-  if (!colorMatch || !nameMatch) return null;
+  const divClose = html.indexOf("</div>", start);
+  const divContent = html.slice(html.indexOf(">", start) + 1, divClose);
 
-  return {
-    name: nameMatch[1].trim(),
-    color: colorMatch[1],
-    extra: extraMatch ? extraMatch[1].trim() : "",
-  };
+  const spanStart = divContent.indexOf("<span");
+  const spanEnd = divContent.indexOf("</span>", spanStart);
+  if (spanStart === -1 || spanEnd === -1) return null;
+
+  const spanBlock = divContent.slice(spanStart, spanEnd + 7);
+
+  const colorMatch = /color:\s*(#[0-9A-Fa-f]{3,6})/.exec(spanBlock);
+  if (!colorMatch) return null;
+
+  const name = spanBlock.slice(spanBlock.indexOf(">") + 1, spanBlock.lastIndexOf("<")).trim();
+  const extra = (divContent.slice(0, spanStart) + divContent.slice(spanEnd + 7)).trim();
+
+  return { name, color: colorMatch[1], extra };
 }
