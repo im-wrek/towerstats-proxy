@@ -14,7 +14,7 @@
 
   "puppeteer-core": "^10.1.0",
   "chrome-aws-lambda": "10.1.0"
-}
+},
   "devDependencies": {
     "typescript": "^5",
     "@types/react": "^19",
