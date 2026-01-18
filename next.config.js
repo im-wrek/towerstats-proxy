@@ -1,10 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
-  experimental: {
-    appDir: true, // Enables the /app directory
-  },
-  swcMinify: true, // Fast minification
+  reactStrictMode: true, // keep this, useful for catching React issues
 };
 
 module.exports = nextConfig;
