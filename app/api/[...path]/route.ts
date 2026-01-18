@@ -1,91 +1,85 @@
-import { NextRequest, NextResponse } from "next/server";
-import chromium from "chrome-aws-lambda";
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+import chromium from 'chrome-aws-lambda';
+import puppeteer from 'puppeteer-core';
+import LRU from 'lru-cache';
 
-export const runtime = "nodejs"; // default Node runtime
+// --- Rate Limit ---
+const rateLimitMap = new Map<string, { count: number; last: number }>();
+const MAX_REQUESTS = 30; // per IP
+const WINDOW_MS = 60_000; // 1 min
 
-// Simple in-memory rate limiter
-const rateLimitWindow = 60_000; // 1 minute
-const maxRequests = 10;
-const ipMap = new Map<string, { count: number; timestamp: number }>();
-
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { path: string[] } }
-) {
-  const ip = request.ip || "global"; // fallback if no IP
+function checkRateLimit(ip: string) {
   const now = Date.now();
-  const record = ipMap.get(ip) || { count: 0, timestamp: now };
-
-  if (now - record.timestamp > rateLimitWindow) {
-    record.count = 0;
-    record.timestamp = now;
+  const record = rateLimitMap.get(ip) || { count: 0, last: now };
+  if (now - record.last > WINDOW_MS) {
+    record.count = 1;
+    record.last = now;
+  } else {
+    record.count++;
   }
+  rateLimitMap.set(ip, record);
+  return record.count <= MAX_REQUESTS;
+}
 
-  record.count += 1;
-  ipMap.set(ip, record);
+// --- Cache ---
+const cache = new LRU<string, any>({
+  max: 100,
+  ttl: 30_000 // 30 seconds
+});
 
-  if (record.count > maxRequests) {
-    return NextResponse.json(
-      { success: false, error: "Rate limit exceeded" },
-      { status: 429 }
-    );
-  }
+// --- Extract tower data ---
+async function getHardestTower(username: string, tracker: string) {
+  const key = `${username}:${tracker}`;
+  const cached = cache.get(key);
+  if (cached) return cached;
 
-  const targetPath = params.path.join("/");
-  const query = request.nextUrl.searchParams.toString();
-  const targetUrl = `https://www.towerstats.com/${targetPath}${query ? `?${query}` : ""}`;
+  const browser = await puppeteer.launch({
+    args: chromium.args,
+    executablePath: await chromium.executablePath,
+    headless: true
+  });
 
-  let browser;
   try {
-    browser = await chromium.puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath,
-      headless: true,
-    });
-
     const page = await browser.newPage();
-    await page.goto(targetUrl, { waitUntil: "networkidle2" });
-    const html = await page.content();
+    await page.goto(`https://towerstats.com/${tracker}?player=${username}`, { waitUntil: 'networkidle2' });
 
-    const hardestTower = extractHardestTower(html);
-
-    return NextResponse.json({
-      success: true,
-      source: targetUrl,
-      hardestTower,
+    const towerData = await page.evaluate(() => {
+      const el = document.querySelector('#hardest-tower');
+      if (!el) return null;
+      const span = el.querySelector('span');
+      return {
+        name: span?.textContent ?? '',
+        color: span?.getAttribute('style')?.match(/#[0-9A-Fa-f]{6}/)?.[0] ?? '#FFF',
+        extra: el.textContent?.replace(span?.textContent ?? '', '').trim() ?? ''
+      };
     });
-  } catch (err) {
-    return NextResponse.json(
-      { success: false, error: err instanceof Error ? err.message : "Unknown error" },
-      { status: 500 }
-    );
+
+    cache.set(key, towerData);
+    return towerData;
   } finally {
-    if (browser) await browser.close();
+    await browser.close();
   }
 }
 
-/**
- * Ultra-lean hardest tower extractor
- */
-function extractHardestTower(html: string) {
-  const start = html.indexOf('id="hardest-tower"');
-  if (start === -1) return null;
+// --- API handler ---
+export async function GET(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for') || 'unknown';
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json({ success: false, error: 'Rate limit exceeded' }, { status: 429 });
+  }
 
-  const divClose = html.indexOf("</div>", start);
-  const divContent = html.slice(html.indexOf(">", start) + 1, divClose);
+  const { searchParams } = new URL(req.url);
+  const username = searchParams.get('username') || '';
+  const tracker = searchParams.get('tracker') || 'etoh';
 
-  const spanStart = divContent.indexOf("<span");
-  const spanEnd = divContent.indexOf("</span>", spanStart);
-  if (spanStart === -1 || spanEnd === -1) return null;
+  if (!username) return NextResponse.json({ success: false, error: 'Missing username' }, { status: 400 });
 
-  const spanBlock = divContent.slice(spanStart, spanEnd + 7);
-
-  const colorMatch = /color:\s*(#[0-9A-Fa-f]{3,6})/.exec(spanBlock);
-  if (!colorMatch) return null;
-
-  const name = spanBlock.slice(spanBlock.indexOf(">") + 1, spanBlock.lastIndexOf("<")).trim();
-  const extra = (divContent.slice(0, spanStart) + divContent.slice(spanEnd + 7)).trim();
-
-  return { name, color: colorMatch[1], extra };
+  try {
+    const hardestTower = await getHardestTower(username, tracker);
+    if (!hardestTower) return NextResponse.json({ success: false, error: 'Tower not found' });
+    return NextResponse.json({ success: true, hardestTower });
+  } catch (err) {
+    return NextResponse.json({ success: false, error: (err as Error).message });
+  }
 }
