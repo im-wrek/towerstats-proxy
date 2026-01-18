@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface HardestTower {
   name: string;
@@ -12,8 +14,8 @@ interface TowerStatsResponse {
   success: boolean;
   source?: string;
   hardestTower?: HardestTower | null;
-  cached?: boolean;
   error?: string;
+  cached?: boolean;
 }
 
 export default function Home() {
@@ -28,15 +30,18 @@ export default function Home() {
       setError("Please enter a username");
       return;
     }
+
     setLoading(true);
     setError(null);
     setResult(null);
 
     try {
-      const res = await fetch(`/api/${tracker}?username=${encodeURIComponent(username)}`, { cache: "no-store" });
+      const res = await fetch(
+        `/api/${tracker}?username=${encodeURIComponent(username)}`,
+        { cache: "no-store" }
+      );
       const data: TowerStatsResponse = await res.json();
-      if (!data.success) setError(data.error || "Unknown error");
-      else setResult(data);
+      setResult(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Request failed");
     } finally {
@@ -45,43 +50,75 @@ export default function Home() {
   }, [tracker, username]);
 
   return (
-    <main style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-      <h1>TowerStats Proxy Tester</h1>
+    <main className="min-h-screen bg-background p-8">
+      <div className="mx-auto max-w-2xl">
+        <h1 className="mb-2 text-3xl font-bold">TowerStats Proxy</h1>
+        <p className="mb-8 text-muted-foreground">
+          Lightweight API proxy for towerstats.com
+        </p>
 
-      <div style={{ margin: "1rem 0" }}>
-        <select value={tracker} onChange={(e) => setTracker(e.target.value)}>
-          <option value="etoh">ETOH</option>
-          <option value="tds">TDS</option>
-          <option value="jtoh">JToH</option>
-        </select>
+        <div className="mb-8 rounded-lg border bg-card p-6">
+          <h2 className="mb-4 text-lg font-semibold">Test Endpoint</h2>
 
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && testEndpoint()}
-          style={{ marginLeft: "0.5rem" }}
-        />
+          <div className="mb-4 flex gap-3">
+            <select
+              value={tracker}
+              onChange={(e) => setTracker(e.target.value)}
+              className="rounded-md border bg-background px-3 py-2 text-sm"
+            >
+              <option value="etoh">ETOH</option>
+              <option value="tds">TDS</option>
+              <option value="jtoh">JToH</option>
+            </select>
 
-        <button onClick={testEndpoint} disabled={loading} style={{ marginLeft: "0.5rem" }}>
-          {loading ? "Loading…" : "Test"}
-        </button>
-      </div>
+            <Input
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && testEndpoint()}
+            />
 
-      {error && <div style={{ color: "red" }}>{error}</div>}
+            <Button onClick={testEndpoint} disabled={loading}>
+              {loading ? "Loading…" : "Test"}
+            </Button>
+          </div>
 
-      {result?.hardestTower && (
-        <div style={{ marginTop: "1rem" }}>
-          <strong>Hardest Tower:</strong>{" "}
-          <span style={{ color: result.hardestTower.color }}>{result.hardestTower.name}</span>{" "}
-          {result.hardestTower.extra}
-          {result.cached && <span> (cached)</span>}
-          <pre>{JSON.stringify(result, null, 2)}</pre>
+          {error && (
+            <div className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+
+          {result?.hardestTower && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  Hardest Tower:
+                </span>
+                <span
+                  className="font-semibold"
+                  style={{ color: result.hardestTower.color }}
+                >
+                  {result.hardestTower.name}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {result.hardestTower.extra}
+                </span>
+              </div>
+
+              <pre className="overflow-x-auto rounded-md bg-muted p-4 text-xs">
+                {JSON.stringify(result, null, 2)}
+              </pre>
+            </div>
+          )}
+
+          {result && !result.hardestTower && (
+            <div className="text-sm text-muted-foreground">
+              Hardest tower not found.
+            </div>
+          )}
         </div>
-      )}
-
-      {result && !result.hardestTower && <div>No hardest tower found.</div>}
+      </div>
     </main>
   );
 }
