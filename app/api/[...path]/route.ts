@@ -11,7 +11,7 @@ const RATE_LIMIT_MAX = 30;
 const rateLimitStore = new Map<string, { count: number; timestamp: number }>();
 const cacheStore = new Map<string, { data: any; timestamp: number }>();
 
-export const runtime = "edge"; // optional, keeps it serverless
+// export const runtime = "edge"; // optional, keeps it serverless
 
 export async function GET(
   request: NextRequest,
