@@ -1,23 +1,26 @@
 {
   "name": "towerstats-proxy",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "lint": "eslint . --ext .ts,.tsx"
   },
   "dependencies": {
-    "next": "16.0.10",
-    "react": "19.2.0",
-    "react-dom": "19.2.0",
-    "puppeteer-core": "^10.1.0",
-    "chrome-aws-lambda": "10.1.0"
+    "next": "^16.0.10",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "puppeteer-core": "^21.3.0",
+    "chrome-aws-lambda": "^19.0.1"
   },
   "devDependencies": {
-    "typescript": "^5",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@types/node": "^22"
+    "typescript": "^5.2.2",
+    "@types/react": "^19.0.52",
+    "@types/react-dom": "^19.0.17",
+    "eslint": "^8.52.0",
+    "eslint-config-next": "^16.0.10"
   }
 }
