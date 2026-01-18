@@ -7,14 +7,13 @@
     "build": "next build",
     "start": "next start"
   },
- "dependencies": {
-  "next": "16.0.10",
-  "react": "19.2.0",
-  "react-dom": "19.2.0",
-
-  "puppeteer-core": "^10.1.0",
-  "chrome-aws-lambda": "10.1.0"
-},
+  "dependencies": {
+    "next": "16.0.10",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "puppeteer-core": "^10.1.0",
+    "chrome-aws-lambda": "10.1.0"
+  },
   "devDependencies": {
     "typescript": "^5",
     "@types/react": "^19",
