@@ -12,7 +12,7 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "puppeteer-core": "^21.4.0",
-    "chrome-aws-lambda": "^19.0.0",
+    "chrome-aws-lambda": "^18.1.0",
     "lru-cache": "^10.1.0"
   },
   "devDependencies": {
