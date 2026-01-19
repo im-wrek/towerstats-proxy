@@ -1,51 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
-import { LRUCache } from "lru-cache"; // ✅ default import works now
 import { chromium } from "playwright";
 
-type TowerStatsResponse = {
-  username: string;
-  score: number;
-  rank: number;
-};
+// Scraper function
+async function getHardestTower(tracker: string, username: string) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
 
-// Simple in-memory cache
-const cache = new LRUCache<string, TowerStatsResponse>({
-  max: 100,
-  ttl: 1000 * 60 * 5, // 5 minutes
-});
+  const url = `https://www.towerstats.com/${tracker}?username=${username}`;
+  await page.goto(url, { waitUntil: "domcontentloaded" });
 
-export async function GET(
-  req: NextRequest,
-  context: { params: Promise<{ path: string[] }> }
-) {
-  // ✅ Await the params promise properly
-  const resolvedParams = await context.params;
-  const path = resolvedParams.path;
+  // Wait for the hardest tower element
+  await page.waitForSelector("#hardest-tower");
 
-  const username = path[0];
-  if (!username) {
-    return NextResponse.json({ error: "Username required" }, { status: 400 });
-  }
+  const html = await page.locator("#hardest-tower").innerHTML();
 
-  if (cache.has(username)) {
-    return NextResponse.json(cache.get(username)!);
+  // Extract span color and tower name
+  const spanMatch = html.match(/<span style="color:\s*(#[0-9A-Fa-f]{6});?\s*">(.*?)<\/span>/);
+  const hex = spanMatch?.[1] || null;
+  const tower = spanMatch?.[2] || null;
+
+  // Extract remaining text
+  const extraText = html.replace(/<span.*?<\/span>/, "").trim();
+
+  await browser.close();
+
+  return { hex, tower, extraText };
+}
+
+// API handler
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const username = searchParams.get("username");
+  const tracker = searchParams.get("tracker");
+
+  if (!username || !tracker) {
+    return NextResponse.json({ error: "Missing username or tracker" }, { status: 400 });
   }
 
   try {
-    // Example scraping logic
-    const browser = await chromium.launch();
-    const page = await browser.newPage();
-    await page.goto(`https://www.towerstats.com/${username}`);
-    const data = {
-      username,
-      score: 1234,
-      rank: 42,
-    };
-    await browser.close();
-
-    cache.set(username, data);
-    return NextResponse.json(data);
-  } catch (err) {
-    return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
+    const hardest_tower = await getHardestTower(tracker, username);
+    return NextResponse.json({ hardest_tower });
+  } catch (e) {
+    console.error("Scrape failed:", e);
+    return NextResponse.json({ error: "Failed to scrape TowerStats" }, { status: 500 });
   }
 }
