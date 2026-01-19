@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import LRUCache from "lru-cache";
+import { LRUCache } from "lru-cache"; // ✅ named import
 import { chromium } from "playwright";
 
 type TowerStatsResponse = {
@@ -10,7 +10,7 @@ type TowerStatsResponse = {
 // Cache setup
 const cache = new LRUCache<string, TowerStatsResponse>({
   max: 100,
-  ttl: 1000 * 60 * 5
+  ttl: 1000 * 60 * 5, // 5 minutes
 });
 
 export const GET = async (
