@@ -13,8 +13,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-gray-900 text-white font-sans">
-        <main className="max-w-3xl mx-auto p-6">{children}</main>
+      <body className="bg-gradient-to-b from-gray-900 to-gray-800 text-white font-sans">
+        <main className="flex flex-col items-center justify-center min-h-screen p-6">
+          <div className="w-full max-w-xl bg-gray-800/90 backdrop-blur-md rounded-2xl shadow-xl border border-gray-700 p-8">
+            {children}
+          </div>
+        </main>
         <Analytics />
       </body>
     </html>
