@@ -4,45 +4,45 @@ import { useState } from "react";
 
 export default function Home() {
   const [username, setUsername] = useState("");
-  const [tracker, setTracker] = useState("");
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const fetchStats = async () => {
-    const res = await fetch(`/api/${tracker}?username=${username}`);
-    const data = await res.json();
-    setResult(data);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username) return;
+
+    setLoading(true);
+    setResult(null);
+
+    try {
+      const res = await fetch(`/api/${username}`);
+      const data = await res.json();
+      setResult(data.hardestTower || "No data found");
+    } catch {
+      setResult("Error fetching data");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <main style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-      <h1 style={{ textAlign: "center" }}>TowerStats Proxy</h1>
+    <main className="flex flex-col items-center justify-center min-h-screen p-8 bg-gray-100">
+      <h1 className="text-4xl font-bold mb-8">TowerStats Scraper</h1>
 
-      <div style={{ maxWidth: 400, margin: "2rem auto", display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <form onSubmit={handleSubmit} className="flex gap-2">
         <input
           type="text"
-          placeholder="Username"
+          placeholder="Enter username"
           value={username}
-          onChange={e => setUsername(e.target.value)}
-          style={{ padding: "0.5rem", fontSize: "1rem" }}
+          onChange={(e) => setUsername(e.target.value)}
+          className="px-4 py-2 border rounded-md"
         />
-        <input
-          type="text"
-          placeholder="Tracker (etoh / tds / etc.)"
-          value={tracker}
-          onChange={e => setTracker(e.target.value)}
-          style={{ padding: "0.5rem", fontSize: "1rem" }}
-        />
-        <button onClick={fetchStats} style={{ padding: "0.5rem", fontSize: "1rem", cursor: "pointer" }}>
-          Fetch Stats
+        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md">
+          {loading ? "Loading..." : "Fetch"}
         </button>
-      </div>
+      </form>
 
-      {result && (
-        <div style={{ textAlign: "center", marginTop: "2rem" }}>
-          <p><strong>Tracker:</strong> {result.tracker}</p>
-          <p><strong>Hardest Tower:</strong> {result.hardestTower}</p>
-        </div>
-      )}
+      {result && <p className="mt-6 text-xl">Hardest Tower: {result}</p>}
     </main>
   );
 }
