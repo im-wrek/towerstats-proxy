@@ -1,9 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    runtime: "nodejs"
-  },
-  turbopack: {} // disable warnings
-}
+  reactStrictMode: true,
+};
 
 module.exports = nextConfig;
