@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   webpack: (config) => {
-    // Ensure Puppeteer binaries are treated as server-side only
+    // Ensure Puppeteer/Chromium binaries are server-only
     config.externals = config.externals || []
     config.externals.push('@sparticuz/chromium')
     return config
