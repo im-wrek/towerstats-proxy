@@ -1,75 +1,51 @@
-import { NextRequest, NextResponse } from "next/server"
-import chromium from "@sparticuz/chromium"
-import puppeteer, { Browser } from "puppeteer-core"
-import { LRUCache } from 'lru-cache';
+import { NextResponse } from "next/server";
+import { LRUCache } from "lru-cache";
+import puppeteer from "puppeteer-core";
+import chromium from "@sparticuz/chromium";
 
-export const runtime = "nodejs"
-
-// ---- Cache
-const cache = new LRUCache<string, { count: number; last: number }>({
-  max: 100,
-  ttl: 1000 * 60, // optional TTL
+const cache = new LRUCache<string, { username: string; hardestTower: string }>({
+  max: 200,
+  ttl: 1000 * 60 * 10, // 10 minutes cache
 });
 
-// ---- Browser reuse (critical)
-let browserPromise: Promise<Browser> | null = null
+export async function GET(req: Request, { params }: { params: { path: string[] } }) {
+  const tracker = params.path[0]; // dynamic tracker
+  const { searchParams } = new URL(req.url);
+  const username = searchParams.get("username")?.trim();
 
-async function getBrowser() {
-  if (!browserPromise) {
-    browserPromise = puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath, // remove ()
-      headless: chromium.headless,
-    })
-  }
-  return browserPromise
-}
+  if (!username) return NextResponse.json({ success: false, error: "Missing username" });
 
-export async function GET(req: NextRequest) {
-  const username = req.nextUrl.searchParams.get("username")
-  if (!username) {
-    return NextResponse.json(
-      { error: "username required" },
-      { status: 400 }
-    )
-  }
-
-  const cacheKey = `hardest:${username}`
-  const cached = cache.get(cacheKey)
-  if (cached) return NextResponse.json(cached)
-
-  const browser = await getBrowser()
-  const page = await browser.newPage()
+  const cacheKey = `${tracker}:${username.toLowerCase()}`;
+  if (cache.has(cacheKey)) return NextResponse.json({ success: true, ...cache.get(cacheKey) });
 
   try {
-    page.setDefaultNavigationTimeout(8000)
-    page.setDefaultTimeout(8000)
+    const browser = await puppeteer.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath, // <- TS-safe
+      headless: chromium.headless,
+    });
 
-    await page.goto(
-      `https://www.towerstats.com/user/${encodeURIComponent(username)}`,
-      { waitUntil: "domcontentloaded" }
-    )
+    const page = await browser.newPage();
+    const url = `https://www.towerstats.com/${tracker}?username=${encodeURIComponent(username)}`;
+    await page.goto(url, { waitUntil: "networkidle0" });
 
-    // Wait ONLY for what we need
-    await page.waitForSelector("#hardesttower", {
-      timeout: 5000,
-    })
+    // scrape hardestTower from JS-rendered content
+    const hardestTower = await page.evaluate(() => {
+      // adjust selector according to towerstats HTML
+      const el = document.querySelector(".hardest-tower");
+      return el?.textContent?.trim() || "Unknown";
+    });
 
-    const hardestTower = await page.$eval(
-      "#hardesttower",
-      el => el.textContent?.trim() ?? null
-    )
+    await browser.close();
 
-    const result = { username, hardestTower }
-    cache.set(cacheKey, result)
+    const result = { username, hardestTower };
+    cache.set(cacheKey, result);
 
-    return NextResponse.json(result)
-  } catch {
-    return NextResponse.json(
-      { error: "scrape failed" },
-      { status: 500 }
-    )
-  } finally {
-    await page.close()
+    return NextResponse.json({ success: true, ...result });
+  } catch (err) {
+    return NextResponse.json({
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to fetch data",
+    });
   }
 }
