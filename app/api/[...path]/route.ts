@@ -2,31 +2,41 @@ import { NextRequest, NextResponse } from "next/server";
 import LRUCache from "lru-cache";
 import { chromium } from "playwright";
 
+type TowerStatsResponse = {
+  hardestTower: string;
+  // add other fields as needed
+};
+
 // Response cache
-const cache = new LRUCache<string, any>({
+const cache = new LRUCache<string, TowerStatsResponse>({
   max: 200,
-  ttl: 1000 * 60 * 5, // 5 min
+  ttl: 1000 * 60 * 5, // 5 minutes
 });
 
-export const GET = async (req: NextRequest, context: { params: { path: string[] } }) => {
-  const path = context.params.path;
-  
-  // Your scraping / API logic here...
-  const username = path[0]; 
-  if (!username) return NextResponse.json({ error: "Missing username" });
+export async function GET(req: NextRequest, { params }: { params: { path: string[] } }) {
+  const username = params.path[0];
+  if (!username) return NextResponse.json({ error: "Username required" }, { status: 400 });
 
+  // Return cached response if available
   if (cache.has(username)) {
-    return NextResponse.json(cache.get(username));
+    return NextResponse.json(cache.get(username)!);
   }
 
-  // Example: scrape towerstats for the user
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
-  await page.goto(`https://www.towerstats.com/${username}`);
-  const data = await page.$eval("#hardest-tower", el => el.textContent || "");
-  await browser.close();
+  try {
+    const browser = await chromium.launch();
+    const page = await browser.newPage();
+    await page.goto(`https://www.towerstats.com/profile/${username}`);
+    await page.waitForSelector("#hardest-tower", { timeout: 5000 });
 
-  const response = { hardestTower: data };
-  cache.set(username, response);
-  return NextResponse.json(response);
-};
+    const hardestTower = await page.$eval("#hardest-tower", el => el.textContent?.trim() || "");
+    await browser.close();
+
+    const result: TowerStatsResponse = { hardestTower };
+    cache.set(username, result);
+
+    return NextResponse.json(result);
+  } catch (err) {
+    console.error(err);
+    return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
+  }
+}
