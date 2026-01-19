@@ -5,17 +5,22 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx"
   },
   "dependencies": {
     "next": "16.0.10",
-    "react": "19.2.0",
-    "react-dom": "19.2.0",
-    "puppeteer-core": "^21.4.0",
-    "chrome-aws-lambda": "10.1.0",
-    "puppeteer-core": "^10.1.0"
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "puppeteer-core": "^21.0.0",
+    "@sparticuz/chromium": "^107.0.0",
+    "lru-cache": "^10.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.2.0"
+    "eslint": "^8.50.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
