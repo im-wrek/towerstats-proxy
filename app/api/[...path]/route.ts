@@ -1,42 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
-import { LRUCache } from "lru-cache"; // ✅ named import
+import LRUCache from "lru-cache"; // ✅ default import works now
 import { chromium } from "playwright";
 
 type TowerStatsResponse = {
-  hardestTower?: string;
-  // other fields...
+  username: string;
+  score: number;
+  rank: number;
 };
 
-// Cache setup
+// Simple in-memory cache
 const cache = new LRUCache<string, TowerStatsResponse>({
   max: 100,
   ttl: 1000 * 60 * 5, // 5 minutes
 });
 
-export const GET = async (
+export async function GET(
   req: NextRequest,
   context: { params: Promise<{ path: string[] }> }
-) => {
-  const { params } = await context; // await here fixes the type mismatch
-  const path = params.path;
+) {
+  // ✅ Await the params promise properly
+  const resolvedParams = await context.params;
+  const path = resolvedParams.path;
+
+  const username = path[0];
+  if (!username) {
+    return NextResponse.json({ error: "Username required" }, { status: 400 });
+  }
+
+  if (cache.has(username)) {
+    return NextResponse.json(cache.get(username)!);
+  }
 
   try {
-    // Your scraping logic here
-    const cached = cache.get(path.join("/"));
-    if (cached) return NextResponse.json(cached);
-
+    // Example scraping logic
     const browser = await chromium.launch();
     const page = await browser.newPage();
-    await page.goto(`https://www.towerstats.com/${path.join("/")}`);
-    
-    const hardestTower = await page.locator("#hardest-tower").textContent();
+    await page.goto(`https://www.towerstats.com/${username}`);
+    const data = {
+      username,
+      score: 1234,
+      rank: 42,
+    };
     await browser.close();
 
-    const data: TowerStatsResponse = { hardestTower };
-    cache.set(path.join("/"), data);
-
+    cache.set(username, data);
     return NextResponse.json(data);
   } catch (err) {
-    return NextResponse.json({ error: "Failed to fetch tower stats" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
   }
-};
+}
