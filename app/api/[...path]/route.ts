@@ -23,7 +23,7 @@ const cache = new LRU<string, TowerStatsResponse>({
   ttl: 1000 * 60 * 5, // 5 minutes
 });
 
-export const runtime = "edge";
+export const runtime = "nodejs" // instead of "edge"
 
 export async function GET(req: NextRequest, { params }: { params: { path: string[] } }) {
   try {
