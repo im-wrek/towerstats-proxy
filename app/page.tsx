@@ -35,60 +35,88 @@ export default function HomePage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-5xl font-extrabold text-yellow-400 text-center">
-        TowerStats Proxy
-      </h1>
-      <p className="text-gray-300 text-center mb-4">
-        Find the hardest tower for any tracker instantly
-      </p>
+    <div>
+      <style>{`
+        body {
+          margin: 0;
+          font-family: sans-serif;
+          background: linear-gradient(180deg, #0f172a, #1e293b);
+          color: white;
+        }
+        .container {
+          max-width: 500px;
+          margin: 2rem auto;
+          padding: 2rem;
+          background: rgba(30, 41, 59, 0.9);
+          border-radius: 1rem;
+          text-align: center;
+        }
+        input, select {
+          padding: 0.75rem;
+          margin: 0.5rem 0;
+          border-radius: 0.5rem;
+          border: 1px solid #4b5563;
+          background: #1f2937;
+          color: white;
+          width: 100%;
+        }
+        button {
+          padding: 0.75rem 1.5rem;
+          margin-top: 0.5rem;
+          border-radius: 0.5rem;
+          border: none;
+          font-weight: bold;
+          background: #facc15;
+          color: #111827;
+          cursor: pointer;
+        }
+        button:hover {
+          background: #fbbf24;
+          transform: translateY(-1px);
+        }
+        .result {
+          margin-top: 1.5rem;
+          padding: 1rem;
+          background: #374151;
+          border-radius: 0.75rem;
+        }
+      `}</style>
 
-      <div className="flex flex-col sm:flex-row gap-4 w-full mb-6">
+      <div className="container">
+        <h1 style={{ fontSize: '2rem', marginBottom: '1rem', color: '#facc15' }}>TowerStats Proxy</h1>
         <input
           type="text"
           placeholder="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          className="p-3 rounded-lg bg-gray-700 border border-gray-600 flex-1 text-white placeholder-gray-400 focus:outline-yellow-400 focus:ring focus:ring-yellow-500"
         />
-        <select
-          value={tracker}
-          onChange={(e) => setTracker(e.target.value)}
-          className="p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-yellow-400 focus:ring focus:ring-yellow-500"
-        >
+        <select value={tracker} onChange={(e) => setTracker(e.target.value)}>
           <option value="etoh">ETOH</option>
           <option value="jtoh">JTOH</option>
           <option value="etohxxl">ETOH XXL</option>
           <option value="tea">TEA</option>
         </select>
-        <button
-          onClick={fetchHardestTower}
-          className="px-6 py-3 bg-yellow-400 text-gray-900 font-bold rounded-lg hover:bg-yellow-500 transition-transform transform hover:-translate-y-1"
-        >
-          Get Hardest Tower
-        </button>
-      </div>
+        <button onClick={fetchHardestTower}>Get Hardest Tower</button>
 
-      {loading && <p className="text-gray-300 text-center">Loading...</p>}
-      {error && <p className="text-red-500 text-center">{error}</p>}
+        {loading && <p style={{ marginTop: '1rem', color: '#9ca3af' }}>Loading...</p>}
+        {error && <p style={{ marginTop: '1rem', color: '#f87171' }}>{error}</p>}
 
-      {hardestTower && (
-        <div className="bg-gray-700 p-6 rounded-xl shadow-lg border border-gray-600 w-full text-center">
-          <p className="text-3xl font-extrabold mb-2">
-            <span
-              style={{
-                background: hardestTower.hex ? `linear-gradient(90deg, ${hardestTower.hex} 0%, #fff 100%)` : "none",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}
-            >
+        {hardestTower && (
+          <div className="result">
+            <p style={{
+              fontSize: '1.5rem',
+              fontWeight: 'bold',
+              background: hardestTower.hex ? `linear-gradient(90deg, ${hardestTower.hex}, #ffffff)` : 'none',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}>
               {hardestTower.tower}
-            </span>
-          </p>
-          <p className="text-gray-400 mb-2">{hardestTower.extraText}</p>
-          <p className="text-gray-500 text-sm">Hex: {hardestTower.hex || "N/A"}</p>
-        </div>
-      )}
+            </p>
+            <p style={{ color: '#9ca3af' }}>{hardestTower.extraText}</p>
+            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Hex: {hardestTower.hex || "N/A"}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
