@@ -5,18 +5,16 @@ import chromium from "@sparticuz/chromium";
 
 const cache = new LRUCache<string, { username: string; hardestTower: string }>({
   max: 200,
-  ttl: 1000 * 60 * 10, // 10 min cache
+  ttl: 1000 * 60 * 10,
 });
 
-// Correct typing for Next.js App Router route handlers
-export async function GET(req: Request, context: { params: { path: string[] } }) {
-  const tracker = context.params.path[0]; // first segment is tracker
-  const urlObj = new URL(req.url);
-  const username = urlObj.searchParams.get("username")?.trim();
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const segments = url.pathname.split("/").filter(Boolean); // ["app", "api", "tracker", ...]
+  const tracker = segments[2]; // whatever comes after /api/
 
-  if (!username) {
-    return NextResponse.json({ success: false, error: "Missing username" });
-  }
+  const username = url.searchParams.get("username")?.trim();
+  if (!username) return NextResponse.json({ success: false, error: "Missing username" });
 
   const cacheKey = `${tracker}:${username.toLowerCase()}`;
   if (cache.has(cacheKey)) return NextResponse.json({ success: true, ...cache.get(cacheKey) });
@@ -29,10 +27,9 @@ export async function GET(req: Request, context: { params: { path: string[] } })
     });
 
     const page = await browser.newPage();
-    const url = `https://www.towerstats.com/${tracker}?username=${encodeURIComponent(username)}`;
-    await page.goto(url, { waitUntil: "networkidle0" });
+    const targetUrl = `https://www.towerstats.com/${tracker}?username=${encodeURIComponent(username)}`;
+    await page.goto(targetUrl, { waitUntil: "networkidle0" });
 
-    // scrape hardestTower from JS-rendered content
     const hardestTower = await page.evaluate(() => {
       const el = document.querySelector(".hardest-tower"); // adjust selector
       return el?.textContent?.trim() || "Unknown";
