@@ -35,21 +35,23 @@ export default function HomePage() {
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-yellow-400">TowerStats Proxy</h1>
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white font-sans flex flex-col items-center p-6">
+      <h1 className="text-4xl font-extrabold text-yellow-400 mb-8">
+        TowerStats Proxy
+      </h1>
 
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md mb-6">
         <input
           type="text"
           placeholder="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          className="p-2 rounded bg-gray-800 border border-gray-700 flex-1"
+          className="p-3 rounded-lg bg-gray-800 border border-gray-700 flex-1 text-white placeholder-gray-400 focus:outline-yellow-400 focus:ring focus:ring-yellow-500"
         />
         <select
           value={tracker}
           onChange={(e) => setTracker(e.target.value)}
-          className="p-2 rounded bg-gray-800 border border-gray-700"
+          className="p-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-yellow-400 focus:ring focus:ring-yellow-500"
         >
           <option value="etoh">ETOH</option>
           <option value="jtoh">JTOH</option>
@@ -58,31 +60,27 @@ export default function HomePage() {
         </select>
         <button
           onClick={fetchHardestTower}
-          className="px-4 py-2 bg-yellow-400 text-gray-900 rounded font-bold hover:bg-yellow-500 transition"
+          className="px-6 py-3 bg-yellow-400 text-gray-900 font-bold rounded-lg hover:bg-yellow-500 transition"
         >
           Get Hardest Tower
         </button>
       </div>
 
-      {loading && <p>Loading...</p>}
+      {loading && <p className="text-gray-300">Loading...</p>}
       {error && <p className="text-red-500">{error}</p>}
 
       {hardestTower && (
-        <div className="p-4 bg-gray-800 rounded border border-gray-700">
-          <p>
+        <div className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700 w-full max-w-md">
+          <p className="text-xl mb-2">
             <span
               style={{ color: hardestTower.hex || "#fff" }}
-              className="font-bold text-lg"
+              className="font-extrabold"
             >
               {hardestTower.tower}
             </span>{" "}
-            - {hardestTower.extraText}
+            <span className="text-gray-400">{hardestTower.extraText}</span>
           </p>
-          <p className="text-gray-400 text-sm">
-            Hex: {hardestTower.hex || "N/A"}
-          </p>
+          <p className="text-gray-500 text-sm">Hex: {hardestTower.hex || "N/A"}</p>
         </div>
       )}
     </div>
-  );
-}
