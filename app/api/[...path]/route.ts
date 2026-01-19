@@ -18,7 +18,7 @@ async function getBrowser() {
   if (!browserPromise) {
     browserPromise = puppeteer.launch({
       args: chromium.args,
-      executablePath: await chromium.executablePath(),
+      executablePath: await chromium.executablePath, // remove ()
       headless: chromium.headless,
     })
   }
