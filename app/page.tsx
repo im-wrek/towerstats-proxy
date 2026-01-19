@@ -19,7 +19,7 @@ export default function HomePage() {
     setHardestTower(null);
 
     try {
-      const res = await fetch(`/api?username=${username}&tracker=${tracker}`);
+      const res = await fetch(`/api/${tracker}?username=${username}`);
       const data = await res.json();
 
       if (res.ok) setHardestTower(data.hardest_tower);
