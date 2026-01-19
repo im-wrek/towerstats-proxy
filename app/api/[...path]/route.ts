@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import chromium from "@sparticuz/chromium"
 import puppeteer, { Browser } from "puppeteer-core"
-import LRU from "lru-cache"
+import { LRUCache } from 'lru-cache';
 
 export const runtime = "nodejs"
 
 // ---- Cache
-const cache = new LRU<string, any>({
-  max: 300,
-  ttl: 1000 * 60 * 10, // 10 minutes
-})
+const cache = new LRUCache<string, { count: number; last: number }>({
+  max: 100,
+  ttl: 1000 * 60, // optional TTL
+});
 
 // ---- Browser reuse (critical)
 let browserPromise: Promise<Browser> | null = null
