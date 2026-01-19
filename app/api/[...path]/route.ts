@@ -21,21 +21,14 @@ export async function GET(
 
   if (!username) return NextResponse.json({ error: "Username required" }, { status: 400 });
 
-  // Check cache
   const cached = cache.get(username);
   if (cached) return NextResponse.json(cached);
 
-  // Launch headless Chromium (Vercel-compatible)
-  const browser = await chromium.launch({
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
-
+  const browser = await chromium.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox"] });
   const page = await browser.newPage();
   await page.goto(`https://www.towerstats.com/${username}`, { waitUntil: "domcontentloaded" });
 
-  // Scrape the "hardest-tower" element
   const hardestTower = await page.locator("#hardest-tower").textContent();
-
   await browser.close();
 
   const response: TowerStatsResponse = { username, hardestTower: hardestTower?.trim() || null };
