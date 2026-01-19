@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint . --ext .ts,.tsx,.js,.jsx"
+    "build": "next build --webpack",
+    "start": "next start"
+  },
+  "engines": {
+    "node": "24.x"
   },
   "dependencies": {
     "next": "16.0.10",
@@ -17,10 +19,6 @@
     "lru-cache": "^10.0.0"
   },
   "devDependencies": {
-    "eslint": "^8.50.0",
     "typescript": "^5.3.0"
-  },
-  "engines": {
-    "node": "18.x"
   }
 }
