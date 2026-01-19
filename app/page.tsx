@@ -4,45 +4,42 @@ import { useState } from "react";
 
 export default function Home() {
   const [username, setUsername] = useState("");
-  const [result, setResult] = useState<string | null>(null);
+  const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const fetchStats = async () => {
     if (!username) return;
-
     setLoading(true);
-    setResult(null);
-
     try {
       const res = await fetch(`/api/${username}`);
-      const data = await res.json();
-      setResult(data.hardestTower || "No data found");
-    } catch {
-      setResult("Error fetching data");
+      const json = await res.json();
+      setData(json);
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen p-8 bg-gray-100">
-      <h1 className="text-4xl font-bold mb-8">TowerStats Scraper</h1>
+    <main style={{ padding: "2rem", fontFamily: "sans-serif" }}>
+      <h1>TowerStats Proxy</h1>
+      <input
+        type="text"
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        placeholder="Enter username"
+        style={{ padding: "0.5rem", marginRight: "1rem" }}
+      />
+      <button onClick={fetchStats} disabled={loading}>
+        {loading ? "Loading..." : "Fetch Stats"}
+      </button>
 
-      <form onSubmit={handleSubmit} className="flex gap-2">
-        <input
-          type="text"
-          placeholder="Enter username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="px-4 py-2 border rounded-md"
-        />
-        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md">
-          {loading ? "Loading..." : "Fetch"}
-        </button>
-      </form>
-
-      {result && <p className="mt-6 text-xl">Hardest Tower: {result}</p>}
+      {data && (
+        <pre style={{ marginTop: "2rem", whiteSpace: "pre-wrap" }}>
+          {JSON.stringify(data, null, 2)}
+        </pre>
+      )}
     </main>
   );
 }
