@@ -1,63 +1,54 @@
-import { NextRequest, NextResponse } from "next/server";
-import { LRUCache } from "lru-cache";
-import puppeteer from "puppeteer-core";
-import chromium from "chrome-aws-lambda"; // Vercel-friendly Chromium
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import fetch from "node-fetch";
+import cheerio from "cheerio";
 
-type TowerStatsResponse = {
-  username: string;
-  hardestTower: string;
-};
+export async function GET(request: NextRequest, { params }: any) {
+  const pathParts = params.path || [];
+  const tracker = pathParts[0];
+  const username = request.nextUrl.searchParams.get("username");
 
-// Cache for 5 minutes
-const cache = new LRUCache<string, TowerStatsResponse>({
-  max: 200,
-  ttl: 1000 * 60 * 5,
-});
+  if (!tracker || !username) {
+    return NextResponse.json({
+      success: false,
+      error: "Missing tracker or username",
+    });
+  }
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { path: string[] } }
-) {
   try {
-    const [tracker, username] = params.path;
+    // Fetch the actual TowerStats page
+    const url = `https://towerstats.com/${tracker}?username=${encodeURIComponent(
+      username
+    )}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Error fetching towerstats");
 
-    if (!tracker || !username) {
-      return NextResponse.json(
-        { success: false, error: "Missing tracker or username" },
-        { status: 400 }
-      );
+    const html = await res.text();
+    const $ = cheerio.load(html);
+
+    // Query the "hardest tower" element
+    const name = $('div[data-testid="hardest-tower"] .name').text().trim();
+    const color = $('div[data-testid="hardest-tower"] .color')
+      .css("color")
+      ?.trim();
+    const extra = $('div[data-testid="hardest-tower"] .extra').text().trim();
+
+    if (!name) {
+      return NextResponse.json({
+        success: false,
+        error: "Hardest tower not found",
+      });
     }
 
-    const cacheKey = `${tracker}-${username}`;
-    if (cache.has(cacheKey)) {
-      return NextResponse.json(cache.get(cacheKey));
-    }
-
-    // Launch Chromium in Vercel Edge-compatible mode
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath,
-      headless: chromium.headless,
+    return NextResponse.json({
+      success: true,
+      source: url,
+      hardestTower: { name, color, extra },
     });
-
-    const page = await browser.newPage();
-    const url = `https://www.towerstats.com/${tracker}?username=${username}`;
-    await page.goto(url, { waitUntil: "networkidle2" });
-
-    // Pull hardestTower from the JS-rendered content
-    const hardestTower = await page.evaluate(() => {
-      const el = document.querySelector(".hardest-tower");
-      return el?.textContent?.trim() || "Unknown";
-    });
-
-    await browser.close();
-
-    const result: TowerStatsResponse = { username, hardestTower };
-    cache.set(cacheKey, result);
-
-    return NextResponse.json(result);
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message || err });
+    return NextResponse.json({
+      success: false,
+      error: err.message,
+    });
   }
 }
