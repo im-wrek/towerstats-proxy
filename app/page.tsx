@@ -27,7 +27,7 @@ export default function HomePage() {
       } else {
         setError(data.error || "Unknown error");
       }
-    } catch (e) {
+    } catch {
       setError("Failed to fetch API");
     }
 
@@ -35,23 +35,26 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white font-sans flex flex-col items-center p-6">
-      <h1 className="text-4xl font-extrabold text-yellow-400 mb-8">
+    <div className="flex flex-col gap-6">
+      <h1 className="text-4xl sm:text-5xl font-extrabold text-yellow-400 text-center">
         TowerStats Proxy
       </h1>
+      <p className="text-gray-300 text-center mb-4">
+        Get the hardest tower for any tracker instantly
+      </p>
 
-      <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md mb-6">
+      <div className="flex flex-col sm:flex-row gap-4 w-full mb-6">
         <input
           type="text"
           placeholder="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          className="p-3 rounded-lg bg-gray-800 border border-gray-700 flex-1 text-white placeholder-gray-400 focus:outline-yellow-400 focus:ring focus:ring-yellow-500"
+          className="p-3 rounded-lg bg-gray-700 border border-gray-600 flex-1 text-white placeholder-gray-400 focus:outline-yellow-400 focus:ring focus:ring-yellow-500"
         />
         <select
           value={tracker}
           onChange={(e) => setTracker(e.target.value)}
-          className="p-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-yellow-400 focus:ring focus:ring-yellow-500"
+          className="p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-yellow-400 focus:ring focus:ring-yellow-500"
         >
           <option value="etoh">ETOH</option>
           <option value="jtoh">JTOH</option>
@@ -66,20 +69,20 @@ export default function HomePage() {
         </button>
       </div>
 
-      {loading && <p className="text-gray-300">Loading...</p>}
-      {error && <p className="text-red-500">{error}</p>}
+      {loading && <p className="text-gray-300 text-center">Loading...</p>}
+      {error && <p className="text-red-500 text-center">{error}</p>}
 
       {hardestTower && (
-        <div className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700 w-full max-w-md">
-          <p className="text-xl mb-2">
+        <div className="bg-gray-700 p-6 rounded-xl shadow-lg border border-gray-600 w-full text-center">
+          <p className="text-2xl font-bold mb-2">
             <span
               style={{ color: hardestTower.hex || "#fff" }}
               className="font-extrabold"
             >
               {hardestTower.tower}
-            </span>{" "}
-            <span className="text-gray-400">{hardestTower.extraText}</span>
+            </span>
           </p>
+          <p className="text-gray-400 mb-2">{hardestTower.extraText}</p>
           <p className="text-gray-500 text-sm">Hex: {hardestTower.hex || "N/A"}</p>
         </div>
       )}
