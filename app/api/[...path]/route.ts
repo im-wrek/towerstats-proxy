@@ -1,11 +1,12 @@
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
-import fetch from "node-fetch";
+import { NextRequest, NextResponse } from "next/server";
 import cheerio from "cheerio";
 
-export async function GET(request: NextRequest, { params }: any) {
-  const pathParts = params.path || [];
-  const tracker = pathParts[0];
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { path: string[] } }
+) {
+  const parts = params.path || [];
+  const tracker = parts[0];
   const username = request.nextUrl.searchParams.get("username");
 
   if (!tracker || !username) {
@@ -16,34 +17,29 @@ export async function GET(request: NextRequest, { params }: any) {
   }
 
   try {
-    // Fetch the actual TowerStats page
-    const url = `https://towerstats.com/${tracker}?username=${encodeURIComponent(
-      username
-    )}`;
+    const url = `https://towerstats.com/${tracker}?username=${encodeURIComponent(username)}`;
+
     const res = await fetch(url);
-    if (!res.ok) throw new Error("Error fetching towerstats");
+    if (!res.ok) throw new Error("Failed to fetch TowerStats");
 
     const html = await res.text();
+
     const $ = cheerio.load(html);
 
-    // Query the "hardest tower" element
-    const name = $('div[data-testid="hardest-tower"] .name').text().trim();
-    const color = $('div[data-testid="hardest-tower"] .color')
-      .css("color")
-      ?.trim();
-    const extra = $('div[data-testid="hardest-tower"] .extra').text().trim();
+    const name = $(".hardest-tower").text().trim(); // server HTML — may not exist
+    const extra = $(".hardest-tower + *").text().trim();
 
     if (!name) {
       return NextResponse.json({
         success: false,
-        error: "Hardest tower not found",
+        error: "Hardest tower not found on server HTML",
+        htmlSample: html.substring(0, 500), // small snippet for debugging
       });
     }
 
     return NextResponse.json({
       success: true,
-      source: url,
-      hardestTower: { name, color, extra },
+      hardestTower: { name, extra },
     });
   } catch (err: any) {
     return NextResponse.json({
