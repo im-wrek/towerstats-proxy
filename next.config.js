@@ -1,11 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  typescript: {
-    ignoreBuildErrors: false
-  },
   webpack: (config) => {
-    // Puppeteer binary must be externalized
+    // Ensure Puppeteer binaries are treated as server-side only
     config.externals = config.externals || []
     config.externals.push('@sparticuz/chromium')
     return config
