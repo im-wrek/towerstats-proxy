@@ -4,23 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build --webpack",
-    "start": "next start"
-  },
-  "engines": {
-    "node": "24.x"
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint ."
   },
   "dependencies": {
     "next": "16.0.10",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "puppeteer-core": "^21.0.0",
-    "@sparticuz/chromium": "^107.0.0",
-    "lru-cache": "^10.0.0"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "puppeteer": "^21.3.0",
+    "lru-cache": "^10.2.0"
   },
-    "devDependencies": {
-    "typescript": "^5.2.2",
-    "@types/react": "^18.2.14",
-    "@types/node": "^20.6.1"
+  "devDependencies": {
+    "typescript": "^5.2.0",
+    "@types/react": "^18.2.7",
+    "@types/node": "^20.5.0"
   }
 }
