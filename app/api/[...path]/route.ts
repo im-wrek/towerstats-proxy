@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import LRUCache from "lru-cache"; // default import works now
+import { LRUCache } from "lru-cache";
+
 import { chromium } from "playwright";
 
 // Response cache
-const cache = new LRUCache<string, any>({
+const cache = new LRUCache<string, TowerStatsResponse>({
   max: 200,
-  ttl: 1000 * 60 * 5 // 5 minutes
+  ttl: 1000 * 60 * 5, // 5 min
 });
 
 // Dynamic TowerStats scraper
