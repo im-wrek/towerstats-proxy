@@ -36,11 +36,11 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-4xl sm:text-5xl font-extrabold text-yellow-400 text-center">
+      <h1 className="text-5xl font-extrabold text-yellow-400 text-center">
         TowerStats Proxy
       </h1>
       <p className="text-gray-300 text-center mb-4">
-        Get the hardest tower for any tracker instantly
+        Find the hardest tower for any tracker instantly
       </p>
 
       <div className="flex flex-col sm:flex-row gap-4 w-full mb-6">
@@ -63,7 +63,7 @@ export default function HomePage() {
         </select>
         <button
           onClick={fetchHardestTower}
-          className="px-6 py-3 bg-yellow-400 text-gray-900 font-bold rounded-lg hover:bg-yellow-500 transition"
+          className="px-6 py-3 bg-yellow-400 text-gray-900 font-bold rounded-lg hover:bg-yellow-500 transition-transform transform hover:-translate-y-1"
         >
           Get Hardest Tower
         </button>
@@ -74,10 +74,13 @@ export default function HomePage() {
 
       {hardestTower && (
         <div className="bg-gray-700 p-6 rounded-xl shadow-lg border border-gray-600 w-full text-center">
-          <p className="text-2xl font-bold mb-2">
+          <p className="text-3xl font-extrabold mb-2">
             <span
-              style={{ color: hardestTower.hex || "#fff" }}
-              className="font-extrabold"
+              style={{
+                background: hardestTower.hex ? `linear-gradient(90deg, ${hardestTower.hex} 0%, #fff 100%)` : "none",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
             >
               {hardestTower.tower}
             </span>
