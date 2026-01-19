@@ -1,3 +1,13 @@
+// app/layout.tsx
+import React from "react";
+import { Analytics } from "@vercel/analytics/next";
+import "./globals.css";
+
+export const metadata = {
+  title: "TowerStats Proxy",
+  description: "Proxy to view TowerStats data quickly",
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -5,7 +15,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-gray-50 text-gray-900">{children}</body>
+      <body>
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }
