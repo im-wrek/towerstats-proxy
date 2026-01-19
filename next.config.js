@@ -1,11 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
-  webpack: (config) => {
-    config.externals = config.externals || []
-    config.externals.push('@sparticuz/chromium')
-    return config
-  }
+  experimental: {
+    runtime: "nodejs"
+  },
+  turbopack: {} // disable warnings
 }
 
-module.exports = nextConfig
+module.exports = nextConfig;
