@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import LRUCache from "lru-cache"; // ✅ default import works now
+import { LRUCache } from "lru-cache"; // ✅ default import works now
 import { chromium } from "playwright";
 
 type TowerStatsResponse = {
