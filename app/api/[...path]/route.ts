@@ -1,51 +1,82 @@
-import { NextResponse } from "next/server";
-import { LRUCache } from "lru-cache";
+// app/api/[...path]/route.ts
+import { NextRequest, NextResponse } from "next/server";
 import puppeteer from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
+import LRU from "lru-cache";
 
-const cache = new LRUCache<string, { username: string; hardestTower: string }>({
-  max: 200,
-  ttl: 1000 * 60 * 10,
+interface HardestTower {
+  name: string;
+  color: string;
+  extra: string;
+}
+
+interface TowerStatsResponse {
+  success: boolean;
+  source?: string;
+  hardestTower?: HardestTower | null;
+  error?: string;
+}
+
+// Simple in-memory cache
+const cache = new LRU<string, TowerStatsResponse>({
+  max: 100,
+  ttl: 1000 * 60 * 5, // 5 minutes
 });
 
-export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const segments = url.pathname.split("/").filter(Boolean); // ["app", "api", "tracker", ...]
-  const tracker = segments[2]; // whatever comes after /api/
+export const runtime = "edge";
 
-  const username = url.searchParams.get("username")?.trim();
-  if (!username) return NextResponse.json({ success: false, error: "Missing username" });
-
-  const cacheKey = `${tracker}:${username.toLowerCase()}`;
-  if (cache.has(cacheKey)) return NextResponse.json({ success: true, ...cache.get(cacheKey) });
-
+export async function GET(req: NextRequest, { params }: { params: { path: string[] } }) {
   try {
+    const tracker = params.path[0];
+    const username = req.nextUrl.searchParams.get("username");
+
+    if (!tracker || !username) {
+      return NextResponse.json({ success: false, error: "Missing tracker or username" });
+    }
+
+    const cacheKey = `${tracker}:${username}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return NextResponse.json(cached);
+
+    // Launch puppeteer using sparticuz Chromium
     const browser = await puppeteer.launch({
       args: chromium.args,
-      executablePath: await chromium.executablePath, // must await
+      executablePath: await chromium.executablePath,
       headless: chromium.headless,
       ignoreHTTPSErrors: true,
     });
-    
-    const page = await browser.newPage();
-    const targetUrl = `https://www.towerstats.com/${tracker}?username=${encodeURIComponent(username)}`;
-    await page.goto(targetUrl, { waitUntil: "networkidle0" });
 
-    const hardestTower = await page.evaluate(() => {
-      const el = document.querySelector(".hardest-tower"); // adjust selector
-      return el?.textContent?.trim() || "Unknown";
+    const page = await browser.newPage();
+    const url = `https://www.towerstats.com/${tracker}?username=${encodeURIComponent(username)}`;
+    await page.goto(url, { waitUntil: "networkidle2" });
+
+    // Evaluate the page and extract the hardest tower
+    const hardestTower: HardestTower | null = await page.evaluate(() => {
+      const el = document.querySelector<HTMLElement>(".hardest-tower");
+      if (!el) return null;
+
+      const name = el.querySelector(".tower-name")?.textContent?.trim() || "";
+      const color = el.querySelector(".tower-name")?.getAttribute("style")?.match(/color:\s*(.*?);/)?.[1] || "#000";
+      const extra = el.querySelector(".tower-extra")?.textContent?.trim() || "";
+
+      return { name, color, extra };
     });
 
     await browser.close();
 
-    const result = { username, hardestTower };
-    cache.set(cacheKey, result);
+    const result: TowerStatsResponse = {
+      success: true,
+      source: url,
+      hardestTower,
+    };
 
-    return NextResponse.json({ success: true, ...result });
+    cache.set(cacheKey, result);
+    return NextResponse.json(result);
   } catch (err) {
+    console.error(err);
     return NextResponse.json({
       success: false,
-      error: err instanceof Error ? err.message : "Failed to fetch data",
+      error: err instanceof Error ? err.message : "Unknown error",
     });
   }
 }
