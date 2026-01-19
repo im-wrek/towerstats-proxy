@@ -1,48 +1,63 @@
-import { NextResponse } from "next/server";
-import puppeteer from "puppeteer";
-import LRUCache from "lru-cache";
+import { NextRequest, NextResponse } from "next/server";
+import * as LRU from "lru-cache";
+import { chromium } from "playwright-core";
 
-const cache = new LRUCache<string, any>({ max: 100, ttl: 1000 * 60 * 5 }); // 5 min cache
+interface HardestTower {
+  name: string;
+  color: string;
+  extra: string;
+}
 
-export const runtime = "nodejs"; // Puppeteer cannot run in Edge
+interface TowerStatsResponse {
+  success: boolean;
+  hardestTower?: HardestTower;
+  error?: string;
+}
 
-export async function GET(req: Request, { params }: { params: { path: string[] } }) {
+const cache = new LRU<string, TowerStatsResponse>({ max: 100 });
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { tracker: string[] } }
+) {
+  const tracker = params.tracker[0];
+  const username = req.nextUrl.searchParams.get("username");
+  if (!username) {
+    return NextResponse.json({ success: false, error: "Missing username" });
+  }
+
+  const cacheKey = `${tracker}-${username}`;
+  const cached = cache.get(cacheKey);
+  if (cached) return NextResponse.json(cached);
+
   try {
-    const [tracker] = params.path;
-    const url = `https://www.towerstats.com/${tracker}`;
-    const username = new URL(req.url).searchParams.get("username");
-
-    if (!username) {
-      return NextResponse.json({ success: false, error: "Username required" });
-    }
-
-    const cacheKey = `${tracker}:${username}`;
-    if (cache.has(cacheKey)) {
-      return NextResponse.json(cache.get(cacheKey));
-    }
-
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
-    await page.goto(`${url}?username=${encodeURIComponent(username)}`, { waitUntil: "domcontentloaded" });
-
-    // Example scraping: grab hardest tower (update selectors based on towerstats DOM)
+    await page.goto(`https://www.towerstats.com/${tracker}?username=${username}`);
+    
+    // Simplified scraping
     const hardestTower = await page.evaluate(() => {
       const el = document.querySelector(".hardest-tower");
       if (!el) return null;
       return {
-        name: el.querySelector(".name")?.textContent || "",
-        color: el.querySelector(".color")?.textContent || "#000",
-        extra: el.querySelector(".extra")?.textContent || ""
+        name: el.textContent || "",
+        color: "#FFFE00",
+        extra: "(scraped)"
       };
     });
 
     await browser.close();
 
-    const result = { success: true, hardestTower };
-    cache.set(cacheKey, result);
+    if (!hardestTower)
+      return NextResponse.json({ success: true, hardestTower: null });
 
+    const result: TowerStatsResponse = { success: true, hardestTower };
+    cache.set(cacheKey, result);
     return NextResponse.json(result);
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message });
+  } catch (err) {
+    return NextResponse.json({
+      success: false,
+      error: err instanceof Error ? err.message : "Unknown error",
+    });
   }
 }
