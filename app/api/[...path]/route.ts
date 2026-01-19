@@ -24,8 +24,9 @@ export async function GET(req: Request) {
       args: chromium.args,
       executablePath: await chromium.executablePath, // must await
       headless: chromium.headless,
+      ignoreHTTPSErrors: true,
     });
-
+    
     const page = await browser.newPage();
     const targetUrl = `https://www.towerstats.com/${tracker}?username=${encodeURIComponent(username)}`;
     await page.goto(targetUrl, { waitUntil: "networkidle0" });
