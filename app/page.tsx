@@ -15,26 +15,26 @@ interface TowerStatsResponse {
 }
 
 export default function Home() {
-  const [tracker, setTracker] = useState("etoh");
+  const [tracker, setTracker] = useState("");
   const [username, setUsername] = useState("");
   const [result, setResult] = useState<TowerStatsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const testEndpoint = useCallback(async () => {
-    if (!username.trim()) {
-      setError("Please enter a username");
+    if (!username.trim() || !tracker.trim()) {
+      setError("Enter a tracker and username");
       return;
     }
+
     setLoading(true);
     setError(null);
     setResult(null);
 
     try {
-      const res = await fetch(
-        `/api/${tracker}?username=${encodeURIComponent(username)}`,
-        { cache: "no-store" }
-      );
+      const res = await fetch(`/api/${tracker}?username=${username}`, {
+        cache: "no-store",
+      });
       const data: TowerStatsResponse = await res.json();
       setResult(data);
     } catch (err) {
@@ -45,61 +45,54 @@ export default function Home() {
   }, [tracker, username]);
 
   return (
-    <main className="min-h-screen p-8 flex justify-center">
-      <div className="w-full max-w-2xl space-y-6">
-        <h1 className="text-4xl font-bold text-center">TowerStats Proxy</h1>
-        <p className="text-center text-gray-500">
-          Lightweight proxy for towerstats.com – supports any tracker
+    <main className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-3xl mx-auto">
+        <h1 className="text-3xl font-bold mb-4">TowerStats Proxy Dashboard</h1>
+        <p className="text-gray-500 mb-6">
+          Live tower stats for any TowerStats tracker.
         </p>
 
-        <div className="p-6 bg-white shadow rounded-lg space-y-4">
-          <div className="flex gap-3">
+        <div className="bg-white p-6 rounded-xl shadow-md mb-8">
+          <div className="flex gap-3 mb-4">
             <input
-              placeholder="Tracker name (e.g., etoh, tds, jtoh)"
+              className="flex-1 rounded border px-3 py-2"
+              placeholder="Tracker"
               value={tracker}
               onChange={(e) => setTracker(e.target.value)}
-              className="flex-1 rounded border px-3 py-2 text-sm"
+              onKeyDown={(e) => e.key === "Enter" && testEndpoint()}
             />
             <input
+              className="flex-1 rounded border px-3 py-2"
               placeholder="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && testEndpoint()}
-              className="flex-1 rounded border px-3 py-2 text-sm"
             />
             <button
-              onClick={testEndpoint}
+              className="bg-blue-600 text-white px-4 py-2 rounded disabled:bg-gray-400"
               disabled={loading}
-              className="rounded bg-blue-600 px-4 py-2 text-white disabled:bg-gray-400"
+              onClick={testEndpoint}
             >
-              {loading ? "Loading…" : "Test"}
+              {loading ? "Loading…" : "Fetch"}
             </button>
           </div>
 
           {error && (
-            <div className="text-red-700 bg-red-100 p-2 rounded">{error}</div>
+            <div className="bg-red-100 text-red-700 p-3 rounded mb-3">{error}</div>
           )}
 
           {result?.hardestTower && (
-            <div className="space-y-2">
-              <div className="flex gap-2 items-center">
-                <span className="font-semibold">Hardest Tower:</span>
-                <span
-                  className="font-bold"
-                  style={{ color: result.hardestTower.color }}
-                >
+            <div className="p-4 rounded-md bg-gray-100 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold" style={{ color: result.hardestTower.color }}>
                   {result.hardestTower.name}
                 </span>
                 <span className="text-gray-500">{result.hardestTower.extra}</span>
               </div>
-              <pre className="bg-gray-100 p-3 rounded text-xs overflow-x-auto">
+              <pre className="text-xs overflow-x-auto bg-white p-2 rounded">
                 {JSON.stringify(result, null, 2)}
               </pre>
             </div>
-          )}
-
-          {result && !result.hardestTower && (
-            <div className="text-gray-500">Hardest tower not found.</div>
           )}
         </div>
       </div>
