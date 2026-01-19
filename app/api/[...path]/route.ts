@@ -1,50 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
-import cheerio from "cheerio";
+import LRUCache from "lru-cache";
+import { chromium } from "playwright";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { path: string[] } }
-) {
-  const parts = params.path || [];
-  const tracker = parts[0];
-  const username = request.nextUrl.searchParams.get("username");
+// Response cache
+const cache = new LRUCache<string, any>({
+  max: 200,
+  ttl: 1000 * 60 * 5 // 5 minutes
+});
 
-  if (!tracker || !username) {
-    return NextResponse.json({
-      success: false,
-      error: "Missing tracker or username",
-    });
-  }
+// Dynamic TowerStats scraper
+export async function GET(req: NextRequest, { params }: { params: { path: string[] } }) {
+  const tracker = params.path.join("/");
 
-  try {
-    const url = `https://towerstats.com/${tracker}?username=${encodeURIComponent(username)}`;
+  if (cache.has(tracker)) return NextResponse.json(cache.get(tracker));
 
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("Failed to fetch TowerStats");
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage();
+  await page.goto(`https://www.towerstats.com/${tracker}`, { waitUntil: "domcontentloaded" });
 
-    const html = await res.text();
+  // Grab hardest-tower dynamically
+  const data = await page.evaluate(() => {
+    const el = document.querySelector("#hardest-tower");
+    return el ? el.textContent : null;
+  });
 
-    const $ = cheerio.load(html);
+  await browser.close();
 
-    const name = $(".hardest-tower").text().trim(); // server HTML — may not exist
-    const extra = $(".hardest-tower + *").text().trim();
-
-    if (!name) {
-      return NextResponse.json({
-        success: false,
-        error: "Hardest tower not found on server HTML",
-        htmlSample: html.substring(0, 500), // small snippet for debugging
-      });
-    }
-
-    return NextResponse.json({
-      success: true,
-      hardestTower: { name, extra },
-    });
-  } catch (err: any) {
-    return NextResponse.json({
-      success: false,
-      error: err.message,
-    });
-  }
+  const response = { tracker, hardestTower: data || "N/A" };
+  cache.set(tracker, response);
+  return NextResponse.json(response);
 }
