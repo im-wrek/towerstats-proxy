@@ -1,66 +1,44 @@
-"use client";
-
 import { useState } from "react";
 
 export default function Home() {
-  const [tracker, setTracker] = useState("");
   const [username, setUsername] = useState("");
+  const [tracker, setTracker] = useState("");
   const [result, setResult] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
 
-  const fetchData = async () => {
-    if (!tracker || !username) return;
-    setLoading(true);
-    setResult(null);
-    try {
-      const res = await fetch(`/api/${tracker}?username=${username}`);
-      const data = await res.json();
-      setResult(data);
-    } catch (err: any) {
-      setResult({ success: false, error: err.message });
-    } finally {
-      setLoading(false);
-    }
+  const fetchStats = async () => {
+    const res = await fetch(`/api/${tracker}?username=${username}`);
+    const data = await res.json();
+    setResult(data);
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-8">
-      <h1 className="text-5xl font-bold mb-8">TowerStats Proxy</h1>
+    <main style={{ padding: "2rem", fontFamily: "sans-serif" }}>
+      <h1 style={{ textAlign: "center" }}>TowerStats Proxy</h1>
 
-      <div className="flex flex-col sm:flex-row gap-3 mb-6 w-full max-w-xl">
+      <div style={{ maxWidth: 400, margin: "2rem auto", display: "flex", flexDirection: "column", gap: "1rem" }}>
         <input
-          className="flex-1 border rounded px-3 py-2"
-          placeholder="Tracker (e.g. etoh / tds / jtoh)"
-          value={tracker}
-          onChange={(e) => setTracker(e.target.value)}
-        />
-        <input
-          className="flex-1 border rounded px-3 py-2"
+          type="text"
           placeholder="Username"
           value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          onChange={e => setUsername(e.target.value)}
+          style={{ padding: "0.5rem", fontSize: "1rem" }}
         />
-        <button
-          className="bg-indigo-600 text-white px-4 py-2 rounded"
-          onClick={fetchData}
-          disabled={loading}
-        >
-          {loading ? "Fetching…" : "Fetch"}
+        <input
+          type="text"
+          placeholder="Tracker (etoh / tds / etc.)"
+          value={tracker}
+          onChange={e => setTracker(e.target.value)}
+          style={{ padding: "0.5rem", fontSize: "1rem" }}
+        />
+        <button onClick={fetchStats} style={{ padding: "0.5rem", fontSize: "1rem", cursor: "pointer" }}>
+          Fetch Stats
         </button>
       </div>
 
       {result && (
-        <div className="bg-white shadow-md rounded p-6 w-full max-w-xl">
-          {result.success ? (
-            <>
-              <p className="text-2xl font-semibold text-indigo-700">
-                Hardest Tower: {result.hardestTower?.name}
-              </p>
-              <p className="text-gray-600">{result.hardestTower?.extra}</p>
-            </>
-          ) : (
-            <p className="text-red-500">{result.error}</p>
-          )}
+        <div style={{ textAlign: "center", marginTop: "2rem" }}>
+          <p><strong>Tracker:</strong> {result.tracker}</p>
+          <p><strong>Hardest Tower:</strong> {result.hardestTower}</p>
         </div>
       )}
     </main>
