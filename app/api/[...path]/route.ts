@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import LRUCache from "lru-cache";
+import { LRUCache } from "lru-cache";
 import { chromium } from "playwright";
 
 type TowerStatsResponse = {
@@ -9,7 +9,7 @@ type TowerStatsResponse = {
 
 // Response cache
 const cache = new LRUCache<string, TowerStatsResponse>({
-  max: 200,
+  max: 100,
   ttl: 1000 * 60 * 5, // 5 minutes
 });
 
