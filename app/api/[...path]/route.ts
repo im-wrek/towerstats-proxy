@@ -10,54 +10,64 @@ interface HardestTower {
 
 interface TowerStatsResponse {
   success: boolean;
-  hardestTower?: HardestTower;
+  hardestTower?: HardestTower | null;
   error?: string;
 }
 
-const cache = new LRU<string, TowerStatsResponse>({ max: 100 });
+const cache = new LRU<string, TowerStatsResponse>({
+  max: 200,
+  ttl: 1000 * 60 * 5, // 5 min
+});
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { tracker: string[] } }
+  ctx: { params: Promise<{ path: string[] }> }
 ) {
-  const tracker = params.tracker[0];
-  const username = req.nextUrl.searchParams.get("username");
-  if (!username) {
-    return NextResponse.json({ success: false, error: "Missing username" });
-  }
-
-  const cacheKey = `${tracker}-${username}`;
-  const cached = cache.get(cacheKey);
-  if (cached) return NextResponse.json(cached);
-
   try {
+    const { path } = await ctx.params; // <— await this
+    const tracker = path[0];            // first segment is tracker
+    const username = req.nextUrl.searchParams.get("username");
+
+    if (!username) {
+      return NextResponse.json({ success: false, error: "Missing username" });
+    }
+
+    const cacheKey = `${tracker}:${username.toLowerCase()}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return NextResponse.json(cached);
+
     const browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
-    await page.goto(`https://www.towerstats.com/${tracker}?username=${username}`);
-    
-    // Simplified scraping
+
+    await page.goto(
+      `https://www.towerstats.com/${tracker}?username=${encodeURIComponent(username)}`,
+      { waitUntil: "domcontentloaded" }
+    );
+
     const hardestTower = await page.evaluate(() => {
       const el = document.querySelector(".hardest-tower");
       if (!el) return null;
-      return {
-        name: el.textContent || "",
-        color: "#FFFE00",
-        extra: "(scraped)"
-      };
+
+      const name = el.textContent?.trim() || "";
+      const extra = el.nextElementSibling?.textContent?.trim() || "";
+      const color = window.getComputedStyle(el).color.toString();
+
+      return { name, color, extra };
     });
 
     await browser.close();
 
-    if (!hardestTower)
-      return NextResponse.json({ success: true, hardestTower: null });
+    const result: TowerStatsResponse = {
+      success: true,
+      hardestTower,
+    };
 
-    const result: TowerStatsResponse = { success: true, hardestTower };
     cache.set(cacheKey, result);
     return NextResponse.json(result);
-  } catch (err) {
+  } catch (err: any) {
     return NextResponse.json({
       success: false,
-      error: err instanceof Error ? err.message : "Unknown error",
+      error: err.message || "Unknown error",
     });
   }
 }
