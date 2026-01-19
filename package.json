@@ -12,14 +12,13 @@
     "next": "16.0.10",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "lru-cache": "^10.1.0",
-    "playwright": "^1.40.0",
+    "playwright": "^1.46.0",
     "@vercel/analytics": "1.6.1"
   },
   "devDependencies": {
-    "typescript": "^5.3.0",
-    "@types/react": "^18.2.0",
-    "@types/node": "^20.6.0"
+    "typescript": "^5.2.2",
+    "@types/react": "^18.2.15",
+    "@types/node": "^20.5.1"
   },
   "engines": {
     "node": ">=18.x"
